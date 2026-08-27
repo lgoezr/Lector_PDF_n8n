@@ -1,0 +1,873 @@
+{
+  "name": "Lector PDF",
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "pdf",
+        "binaryPropertyName": "attachment_0",
+        "options": {}
+      },
+      "id": "1744c4ad-8046-49ac-a86e-802365480930",
+      "name": "Extraer texto PDF",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        672,
+        -192
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-5-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-5-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=Analiza el siguiente texto correspondiente a una factura.\n\nExtrae únicamente la información que esté explícitamente presente en el documento.\n\nDevuelve un JSON con los siguientes campos:\nproveedor, nit, numero_factura, fecha, subtotal, iva, total, moneda, concepto\n\nReglas:\n1. No inventes información.\n2. Si un campo no aparece, devuelve null.\n3. Los valores monetarios deben ser números.\n4. La fecha debe estar en formato YYYY-MM-DD.\n5. Devuelve únicamente JSON válido, sin texto adicional, sin backticks.\n\nTexto de la factura:\n{{ $json.text }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "f36506b8-3e09-41f7-972a-6734a7211517",
+      "name": "Message a model",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        896,
+        -192
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "gdsilZiVzYQWzZ1Y",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1z-Tl6MEhKktfGL07LIlarDbs1vQqn3Wk3ciX9-XSmH4",
+          "mode": "list",
+          "cachedResultName": "Registro_Facturas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1z-Tl6MEhKktfGL07LIlarDbs1vQqn3Wk3ciX9-XSmH4/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Hoja 1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1z-Tl6MEhKktfGL07LIlarDbs1vQqn3Wk3ciX9-XSmH4/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Num_Factura",
+              "lookupValue": "={{ $json.numero_factura }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "35ba7edb-f14c-45ac-a5a5-01a13e0ba401",
+      "name": "Buscar duplicado",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1904,
+        -448
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "BGvc9cgXvSjsLhSD",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Extraer Correo').item.json.from.value[0].address }}",
+        "subject": "ALERTA: Factura duplicada",
+        "emailType": "text",
+        "message": "=La factura número {{ $('Parseado Respuesta').item.json.numero_factura }} del proveedor {{ $('Parseado Respuesta').item.json.proveedor }} ya está registrada en la hoja. No se registró de nuevo.",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "23a0ae65-f171-4fda-93b1-17b995e90631",
+      "name": "Alerta factura duplicada",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2336,
+        -768
+      ],
+      "webhookId": "9c9faa58-9b39-4a44-b6ea-839501169268",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "CP1prHyrlD1gdKoS",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1z-Tl6MEhKktfGL07LIlarDbs1vQqn3Wk3ciX9-XSmH4",
+          "mode": "list",
+          "cachedResultName": "Registro_Facturas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1z-Tl6MEhKktfGL07LIlarDbs1vQqn3Wk3ciX9-XSmH4/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Hoja 1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1z-Tl6MEhKktfGL07LIlarDbs1vQqn3Wk3ciX9-XSmH4/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Proveedor": "={{ $('Parseado Respuesta').item.json.proveedor }}",
+            "NIT": "={{ $('Parseado Respuesta').item.json.nit }}",
+            "Num_Factura": "={{ $('Parseado Respuesta').item.json.numero_factura }}",
+            "Fecha_Factura": "={{ $('Parseado Respuesta').item.json.fecha }}",
+            "Subtotal": "={{ $('Parseado Respuesta').item.json.subtotal }}",
+            "IVA": "={{ $('Parseado Respuesta').item.json.iva }}",
+            "Total": "={{ $('Parseado Respuesta').item.json.total }}",
+            "Moneda": "={{ $('Parseado Respuesta').item.json.moneda }}",
+            "Concepto": "={{ $('Parseado Respuesta').item.json.concepto }}",
+            "Estado": "Registrada",
+            "Fecha_P": "={{ $now.toFormat('yyyy-MM-dd') }}"
+          },
+          "schema": [
+            {
+              "id": "Proveedor",
+              "displayName": "Proveedor",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "NIT",
+              "displayName": "NIT",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Num_Factura",
+              "displayName": "Num_Factura",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Fecha_Factura",
+              "displayName": "Fecha_Factura",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Subtotal",
+              "displayName": "Subtotal",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "IVA",
+              "displayName": "IVA",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Total",
+              "displayName": "Total",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Moneda",
+              "displayName": "Moneda",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Concepto",
+              "displayName": "Concepto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Estado",
+              "displayName": "Estado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Fecha_P",
+              "displayName": "Fecha_P",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "matchingColumns": []
+        },
+        "options": {}
+      },
+      "id": "7839d32e-f685-4e2b-aeda-9aba32ccd275",
+      "name": "Registrar factura",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2336,
+        -416
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "BGvc9cgXvSjsLhSD",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "id": "b4d69ea9-b466-4abb-ad8d-3696fd597904",
+      "name": "Combinar binario",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2416,
+        336
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Extraer Correo').item.json.from.value[0].address }}",
+        "subject": "ALERTA: Formato de Factura Incorrecto",
+        "emailType": "text",
+        "message": "=ALERTA: La factura que envió en el correo \"{{ $('Extraer Correo').item.json.subject }}\" no se ha podido procesar porque el archivo debe ser PDF. Inténtelo de nuevo.",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "93e789ec-6688-4dcb-b06a-06c58ac44a63",
+      "name": "Alerta no es PDF",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        672,
+        0
+      ],
+      "webhookId": "f628f5c0-01ba-4f1e-b489-0904da88a1e0",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "CP1prHyrlD1gdKoS",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "inputDataFieldName": "attachment_0",
+        "name": "={{ $('Parseado Respuesta').item.json.numero_factura }}.pdf",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive",
+          "cachedResultName": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1wDA6nDOUXFAFxqzQCtIfQfIY7r5LtVx9",
+          "mode": "list",
+          "cachedResultName": "Procesadas",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1wDA6nDOUXFAFxqzQCtIfQfIY7r5LtVx9"
+        },
+        "options": {}
+      },
+      "id": "ed08e920-873a-431c-8dd4-29866ec6003b",
+      "name": "Guardar PDF en Drive",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        2784,
+        176
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "p4wkiAkP96lzYrE2",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Extraer Correo').item.json.from.value[0].address }}",
+        "subject": "¡Factura procesada correctamente! :)",
+        "emailType": "text",
+        "message": "=La factura número {{ $('Parseado Respuesta').item.json.numero_factura }} del proveedor {{ $('Parseado Respuesta').item.json.proveedor }} por un total de {{ $('Parseado Respuesta').item.json.total }} {{ $('Parseado Respuesta').item.json.moneda }} fue procesada, registrada y guardada correctamente en Google Drive.",
+        "options": {}
+      },
+      "id": "1fa4f8b6-ca70-4683-859b-aadf854e0527",
+      "name": "Notificar éxito",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        3008,
+        176
+      ],
+      "webhookId": "37fe525b-1972-4bb2-8536-b4365f5c6168",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "CP1prHyrlD1gdKoS",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "a998def5-7198-4783-b75b-d1d69d28d5d2",
+              "leftValue": "={{ $binary.attachment_0.mimeType }}",
+              "rightValue": "application/pdf",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "8005cb78-9e1c-4cbb-b64c-307dbd9243b7",
+      "name": "¿Es PDF?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        448,
+        -64
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "2d133495-a079-4295-bb54-97792c6fb812",
+              "leftValue": "={{ Object.keys($binary || {}).length > 0 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "e1a72501-9e08-490f-b9ed-84d309c8c89c",
+      "name": "¿Tiene adjunto?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        224,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "q": "subject:(factura OR invoice)",
+          "readStatus": "unread"
+        },
+        "options": {
+          "dataPropertyAttachmentsPrefixName": "attachment_",
+          "downloadAttachments": true
+        }
+      },
+      "id": "f337c42d-93ef-4302-b348-0e701e855c98",
+      "name": "Extraer Correo",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -32,
+        352
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "CP1prHyrlD1gdKoS",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Extraer Correo').item.json.from.value[0].address }}",
+        "subject": "ALERTA: Factura sin archivo adjunto.",
+        "emailType": "text",
+        "message": "=ALERTA: La factura que envió en el correo \"{{ $('Extraer Correo').item.json.subject }}\", enviado el {{ $('Extraer Correo').item.json.date }}, no se ha podido procesar porque lo ha enviado sin archivo adjunto. Por favor, vuelva a intentarlo.",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "edccdbcb-2f07-4a18-ae29-e97626593d20",
+      "name": "Alerta no hay adjunto",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        448,
+        96
+      ],
+      "webhookId": "0ec09f17-41ed-4a6d-9001-e5e708a2d0be",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "CP1prHyrlD1gdKoS",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\n\nlet raw = item?.output?.[0]?.content?.[0]?.text\n       || item?.message?.content\n       || item?.text\n       || item?.output;\n\nlet data;\ntry {\n  const cleaned = String(raw).replace(/```json|```/g, '').trim();\n  data = JSON.parse(cleaned);\n} catch (e) {\n  data = { error: \"JSON inválido devuelto por la IA\", raw };\n}\n\nreturn [{ json: data }];"
+      },
+      "id": "69852de8-ae5d-4cf2-b198-7b2721b95106",
+      "name": "Parseado Respuesta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1264,
+        -192
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "a53523e2-192f-426c-9eb2-90e85b7e60c0",
+              "leftValue": "={{ $json.proveedor }}",
+              "rightValue": "={{ $json.nit }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "5f9181a8-e983-428d-9751-3dd801c122c7",
+              "leftValue": "={{ $json.nit }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "3862026f-ec08-4c61-81a9-48424aa1a66a",
+              "leftValue": "={{ $json.numero_factura }}",
+              "rightValue": "",
+              "operator": {
+                "type": "dateTime",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "202d8599-0979-430c-a9cf-40a9f8c9f944",
+              "leftValue": "={{ $json.fecha }}",
+              "rightValue": "",
+              "operator": {
+                "type": "dateTime",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "f3851f1c-2969-49fc-907f-ecfae5794f05",
+              "leftValue": "={{ $json.total }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": "=",
+        "options": {}
+      },
+      "id": "af44bb65-1954-4cf0-b8e1-75908c214e5e",
+      "name": "¿Datos completos?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1488,
+        -192
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Extraer Correo').item.json.from.value[0].address }}",
+        "subject": "ALERTA: Datos faltantes",
+        "emailType": "text",
+        "message": "=ALERTA: La factura enviada en el correo \"{{ $('Extraer Correo').item.json.subject }}\" el día {{ $('Extraer Correo').item.json.date }}, no se ha podido procesar porque faltan datos, por favor intente de nuevo.",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "297a02ff-28f2-4714-9f11-a79487eaaa4b",
+      "name": "Alerta datos incompletos",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1712,
+        -96
+      ],
+      "webhookId": "fab3f5e2-c837-49df-b4e8-f29c2948cd9d",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "CP1prHyrlD1gdKoS",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d115eea8-bd7e-42b4-8565-b5c77eee28f3",
+              "leftValue": "={{ Math.abs(($json.subtotal + $json.iva) - $json.total) }}",
+              "rightValue": 1,
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "56e770a8-7d38-4919-bcf2-4e3dcba5b1e7",
+      "name": "¿Calculos correctos?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1712,
+        -256
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "bd68e24f-e548-4650-929f-64380907656b",
+              "leftValue": "={{ $json.Num_Factura }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "e8a20961-a151-4a5d-84c0-0005957bfe73",
+      "name": "¿Ya existe?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2128,
+        -448
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Extraer texto PDF": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Parseado Respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar duplicado": {
+      "main": [
+        [
+          {
+            "node": "¿Ya existe?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar factura": {
+      "main": [
+        [
+          {
+            "node": "Combinar binario",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combinar binario": {
+      "main": [
+        [
+          {
+            "node": "Guardar PDF en Drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar PDF en Drive": {
+      "main": [
+        [
+          {
+            "node": "Notificar éxito",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Es PDF?": {
+      "main": [
+        [
+          {
+            "node": "Extraer texto PDF",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Alerta no es PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Tiene adjunto?": {
+      "main": [
+        [
+          {
+            "node": "¿Es PDF?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Alerta no hay adjunto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer Correo": {
+      "main": [
+        [
+          {
+            "node": "¿Tiene adjunto?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Combinar binario",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Parseado Respuesta": {
+      "main": [
+        [
+          {
+            "node": "¿Datos completos?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Datos completos?": {
+      "main": [
+        [
+          {
+            "node": "¿Calculos correctos?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Alerta datos incompletos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Calculos correctos?": {
+      "main": [
+        [
+          {
+            "node": "Buscar duplicado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Ya existe?": {
+      "main": [
+        [
+          {
+            "node": "Alerta factura duplicada",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Registrar factura",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "fc5519ff-3817-4c86-a999-6e70cbea195e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e0863c103e65f18648c6a77755c4b810ac3a3f60a3b816a30186f78b891dc7eb"
+  },
+  "nodeGroups": [],
+  "id": "AyGjVAHG2eszVGxb",
+  "tags": []
+}
